@@ -17,7 +17,7 @@ import {
 
 // Replace the hardcoded API base URL with the generated API Gateway endpoint.
 // After deploying the Terraform configuration, the API Gateway endpoint will be displayed in the Terraform output.
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://wsom6tfto9.execute-api.eu-west-3.amazonaws.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://6bz00r29y3.execute-api.eu-west-3.amazonaws.com/api';
 
 // Common function to handle API responses
 async function handleApiResponse<T>(response: Response, setError?: (error: string) => void): Promise<T> {
