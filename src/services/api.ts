@@ -54,22 +54,22 @@ function getAuthHeaders(): HeadersInit {
 
 // Authentication API
 export const authApi = {
-  login: async (data: LoginFormData, setError?: (error: string) => void): Promise<ApiResponse<{ token: string; user: User }>> => {
+  login: async (data: LoginFormData, setError?: (error: string) => void): Promise<{ message: string; token: string; user: User }> => {
     const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    return handleApiResponse<ApiResponse<{ token: string; user: User }>>(response, setError);
+    return handleApiResponse<{ message: string; token: string; user: User }>(response, setError);
   },
 
-  register: async (data: RegisterFormData, setError?: (error: string) => void): Promise<ApiResponse<{ token: string; user: User }>> => {
+  register: async (data: RegisterFormData, setError?: (error: string) => void): Promise<{ message: string; token: string; user: User }> => {
     const response = await fetch(`${API_BASE_URL}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    return handleApiResponse<ApiResponse<{ token: string; user: User }>>(response, setError);
+    return handleApiResponse<{ message: string; token: string; user: User }>(response, setError);
   },
 };
 

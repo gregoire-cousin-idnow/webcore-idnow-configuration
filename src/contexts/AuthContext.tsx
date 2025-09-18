@@ -116,7 +116,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'LOGIN_REQUEST' });
     try {
       const response = await authApi.login({ email, password });
-      const { token, user } = response.data;
+      // The API returns token and user directly in the response, not in a data property
+      const { token, user } = response;
       
       // Save to local storage
       localStorage.setItem('token', token);
@@ -127,7 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         payload: { user, token },
       });
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Login failed';
+      const errorMessage = error.message || 'Login failed';
       dispatch({
         type: 'LOGIN_FAILURE',
         payload: errorMessage,
@@ -140,7 +141,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'REGISTER_REQUEST' });
     try {
       const response = await authApi.register({ email, password, confirmPassword: password, userType, adminKey });
-      const { token, user } = response.data;
+      // The API returns token and user directly in the response, not in a data property
+      const { token, user } = response;
       
       // Save to local storage
       localStorage.setItem('token', token);
@@ -151,7 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         payload: { user, token },
       });
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Registration failed';
+      const errorMessage = error.message || 'Registration failed';
       dispatch({
         type: 'REGISTER_FAILURE',
         payload: errorMessage,
