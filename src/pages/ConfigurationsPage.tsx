@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Box, 
@@ -24,7 +24,20 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { configurationsApi } from '../services/api';
-import { Configuration, ConfigurationFormData } from '../types';
+import { Configuration, ConfigurationFormData } from '../models';
+
+// Validation function for configuration keys
+const validateConfigKey = (key: string): { isValid: boolean; errorMessage?: string } => {
+  if (!key) {
+    return { isValid: false, errorMessage: 'Key is required' };
+  }
+  
+  if (!key.startsWith('public.')) {
+    return { isValid: false, errorMessage: 'Key must start with "public."' };
+  }
+  
+  return { isValid: true };
+};
 
 const ConfigurationsPage: React.FC = () => {
   const { shortname, version } = useParams<{ shortname: string; version: string }>();
@@ -36,13 +49,18 @@ const ConfigurationsPage: React.FC = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
   const [selectedConfig, setSelectedConfig] = useState<Configuration | null>(null);
   const [formData, setFormData] = useState<ConfigurationFormData>({
-    key: '',
+    key: 'public.',
     value: '',
     description: ''
   });
+  const [formErrors, setFormErrors] = useState<{
+    key?: string;
+    value?: string;
+    description?: string;
+  }>({});
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  const fetchConfigurations = async () => {
+  const fetchConfigurations = useCallback(async () => {
     if (!shortname || !version) return;
     
     setLoading(true);
@@ -56,19 +74,20 @@ const ConfigurationsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [shortname, version]);
 
   useEffect(() => {
     fetchConfigurations();
-  }, [shortname, version]);
+  }, [fetchConfigurations]);
 
   const handleCreateConfiguration = () => {
     setIsEditing(false);
     setFormData({
-      key: '',
+      key: 'public.',
       value: '',
       description: ''
     });
+    setFormErrors({});
     setOpenDialog(true);
   };
 
@@ -80,6 +99,7 @@ const ConfigurationsPage: React.FC = () => {
       value: config.value,
       description: config.description
     });
+    setFormErrors({});
     setOpenDialog(true);
   };
 
@@ -91,10 +111,11 @@ const ConfigurationsPage: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setFormData({
-      key: '',
+      key: 'public.',
       value: '',
       description: ''
     });
+    setFormErrors({});
   };
 
   const handleCloseDeleteDialog = () => {
@@ -110,8 +131,31 @@ const ConfigurationsPage: React.FC = () => {
     });
   };
 
+  const validateForm = (): boolean => {
+    const errors: { key?: string; value?: string; description?: string } = {};
+    let isValid = true;
+
+    // Validate key
+    const keyValidation = validateConfigKey(formData.key);
+    if (!keyValidation.isValid) {
+      errors.key = keyValidation.errorMessage;
+      isValid = false;
+    }
+
+    // Validate value (optional validation)
+    if (!formData.value) {
+      errors.value = 'Value is required';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
   const handleSubmit = async () => {
     if (!shortname || !version) return;
+    
+    if (!validateForm()) return;
     
     try {
       if (isEditing && selectedConfig) {
@@ -231,6 +275,8 @@ const ConfigurationsPage: React.FC = () => {
             value={formData.key}
             onChange={handleInputChange}
             disabled={isEditing}
+            error={!!formErrors.key}
+            helperText={formErrors.key || "Key must start with 'public.'"}
             sx={{ mb: 2 }}
           />
           <TextField
@@ -242,6 +288,8 @@ const ConfigurationsPage: React.FC = () => {
             variant="outlined"
             value={formData.value}
             onChange={handleInputChange}
+            error={!!formErrors.value}
+            helperText={formErrors.value}
             sx={{ mb: 2 }}
           />
           <TextField

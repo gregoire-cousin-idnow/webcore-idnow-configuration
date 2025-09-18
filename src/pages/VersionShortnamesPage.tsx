@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -22,11 +22,14 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
-import { shortnamesApi } from '../services/api';
-import { Shortname, ShortnameFormData } from '../models';
+import { versionsApi, shortnamesApi } from '../services/api';
+import { Shortname, ShortnameFormData, Version } from '../models';
 
-const ShortnamesPage: React.FC = () => {
+const VersionShortnamesPage: React.FC = () => {
+  const { version } = useParams<{ version: string }>();
+  const navigate = useNavigate();
+  
+  const [versionDetails, setVersionDetails] = useState<Version | null>(null);
   const [shortnames, setShortnames] = useState<Shortname[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,13 +46,12 @@ const ShortnamesPage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
   const [shortnameToDelete, setShortnameToDelete] = useState<string | null>(null);
 
-  const { authState } = useAuth();
-  const navigate = useNavigate();
-
-  const fetchShortnames = async () => {
+  const fetchShortnames = useCallback(async () => {
+    if (!version) return;
+    
     try {
       setLoading(true);
-      const response = await shortnamesApi.getAll();
+      const response = await versionsApi.getVersionShortnames(version);
       setShortnames(response.shortnames || []);
       setError(null);
     } catch (err: any) {
@@ -57,11 +59,11 @@ const ShortnamesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [version]);
 
   useEffect(() => {
     fetchShortnames();
-  }, []);
+  }, [fetchShortnames]);
 
   const handleOpenDialog = () => {
     setFormData({ shortname: '', description: '' });
@@ -81,7 +83,7 @@ const ShortnamesPage: React.FC = () => {
       errors.shortname = 'Shortname is required';
       isValid = false;
     } else if (!/^[a-zA-Z0-9-]+$/.test(formData.shortname)) {
-      errors.shortname = 'Shortname can only contain letters (including camelCase), numbers, and hyphens';
+      errors.shortname = 'Shortname can only contain letters, numbers, and hyphens';
       isValid = false;
     }
 
@@ -90,11 +92,11 @@ const ShortnamesPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    if (!version || !validateForm()) return;
 
     try {
       setSubmitting(true);
-      await shortnamesApi.create(formData);
+      await versionsApi.createShortnameInVersion(version, formData);
       setOpenDialog(false);
       fetchShortnames();
     } catch (err: any) {
@@ -134,7 +136,7 @@ const ShortnamesPage: React.FC = () => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Shortnames
+          Shortnames for Version: {version}
         </Typography>
         <Button
           variant="contained"
@@ -158,7 +160,7 @@ const ShortnamesPage: React.FC = () => {
         </Box>
       ) : shortnames.length === 0 ? (
         <Alert severity="info">
-          No shortnames found. Create your first shortname to get started.
+          No shortnames found in this version. Create your first shortname to get started.
         </Alert>
       ) : (
         <Grid container spacing={3}>
@@ -181,23 +183,23 @@ const ShortnamesPage: React.FC = () => {
                     <Button
                       size="small"
                       component={Link}
-                      to={`/shortnames/${shortname.shortname}`}
+                      to={`/versions/${version}/shortnames/${shortname.shortname}`}
                     >
                       Details
                     </Button>
                     <Button
                       size="small"
                       component={Link}
-                      to={`/shortnames/${shortname.shortname}/versions`}
+                      to={`/versions/${version}/shortnames/${shortname.shortname}/configurations`}
                     >
-                      Versions
+                      Configurations
                     </Button>
                   </Box>
                   <Box>
                     <IconButton
                       size="small"
                       component={Link}
-                      to={`/shortnames/${shortname.shortname}/edit`}
+                      to={`/versions/${version}/shortnames/${shortname.shortname}/edit`}
                       color="primary"
                     >
                       <EditIcon fontSize="small" />
@@ -278,4 +280,4 @@ const ShortnamesPage: React.FC = () => {
   );
 };
 
-export default ShortnamesPage;
+export default VersionShortnamesPage;

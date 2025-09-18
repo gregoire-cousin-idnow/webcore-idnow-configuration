@@ -1,0 +1,141 @@
+
+# API Curl Command Examples
+
+BASE_URL="https://6bz00r29y3.execute-api.eu-west-3.amazonaws.com/api"
+
+# =============================================
+# Authentication Endpoints
+# =============================================
+
+# Login
+curl -X POST "${BASE_URL}/login" -H "Content-Type: application/json" -d '{ "email": "user@example.com", "password": "yourpassword" }'
+
+# Register
+curl -X POST "${BASE_URL}/register" -H "Content-Type: application/json" -d '{ "email": "newuser@example.com", "password": "newpassword", "confirmPassword": "newpassword", "userType": "user" }'
+
+# Register as Admin (requires admin key)
+curl -X POST "${BASE_URL}/register" -H "Content-Type: application/json" -d '{ "email": "admin@example.com", "password": "adminpassword", "confirmPassword": "adminpassword", "userType": "admin", "adminKey": "your-admin-key" }'
+
+# =============================================
+# Shortname Endpoints
+# =============================================
+
+# Get all shortnames
+curl -X GET "${BASE_URL}/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Get a specific shortname
+curl -X GET "${BASE_URL}/shortnames/example-shortname" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Create a new shortname
+curl -X POST "${BASE_URL}/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "shortname": "new-shortname", "description": "Description of the new shortname" }'
+
+# Update a shortname
+curl -X PUT "${BASE_URL}/shortnames/example-shortname" \
+   -`H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "shortname": "example-shortname", "description": "Updated description for the shortname" }'
+
+# Delete a shortname
+curl -X DELETE "${BASE_URL}/shortnames/example-shortname" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# =============================================
+# Version Endpoints (Version-First Approach)
+# =============================================
+
+# Get all versions (top-level)
+curl -X GET "${BASE_URL}/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Get a specific version by ID
+curl -X GET "${BASE_URL}/versions/2.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Create a new version (top-level entity)
+curl -X POST "${BASE_URL}/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "2.0.0", "description": "New major version", "isActive": true }'
+
+# Update a version
+curl -X PUT "${BASE_URL}/versions/2.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "2.0.0", "description": "Updated version description", "isActive": true }'
+
+# Delete a version
+curl -X DELETE "${BASE_URL}/versions/2.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Get all shortnames for a version
+curl -X GET "${BASE_URL}/versions/2.0.0/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Add a shortname to a version
+curl -X POST "${BASE_URL}/versions/2.0.0/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "shortname": "web-sdk", "description": "Web SDK configurations" }'
+
+# =============================================
+# Version-Shortname Association (Legacy Approach)
+# =============================================
+
+# Get all versions for a shortname
+curl -X GET "${BASE_URL}/shortnames/example-shortname/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Get a specific version for a shortname
+curl -X GET "${BASE_URL}/shortnames/example-shortname/versions/1.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Create a new version for a shortname
+curl -X POST "${BASE_URL}/shortnames/example-shortname/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "1.0.0", "description": "Initial version", "isActive": true }'
+
+# Update a version
+curl -X PUT "${BASE_URL}/shortnames/example-shortname/versions/1.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "1.0.0", "description": "Updated version description", "isActive": true }'
+
+# Delete a version
+curl -X DELETE "${BASE_URL}/shortnames/example-shortname/versions/1.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# =============================================
+# Configuration Endpoints
+# =============================================
+
+# Get all configurations for a version
+curl -X GET "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Get a specific configuration
+curl -X GET "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations/config-id" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Create a new configuration
+curl -X POST "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "key": "feature.enabled", "value": true, "description": "Toggle for feature" }'
+
+# Create a configuration with JSON value
+curl -X POST "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "key": "app.settings", "value": { "theme": "dark", "notifications": true, "language": "en" }, "description": "Application settings" }'
+
+# Update a configuration
+curl -X PUT "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations/config-id" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "key": "feature.enabled", "value": false, "description": "Toggle for feature (updated)" }'
+
+# Delete a configuration
+curl -X DELETE "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations/config-id" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# =============================================
+# Advanced Operations
+# =============================================
+
+# Get all versions (version-first approach)
+curl -X GET "${BASE_URL}/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# Duplicate a version (create a new version with the same shortnames and configurations)
+
+# Note: This is a client-side operation that makes multiple API calls
+
+# 1. Create the new version
+curl -X POST "${BASE_URL}/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "2.1.0", "description": "New version based on 2.0.0", "isActive": true }'
+
+# 2. Get all shortnames for the source version
+curl -X GET "${BASE_URL}/versions/2.0.0/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# 3. For each shortname, add it to the new version
+curl -X POST "${BASE_URL}/versions/2.1.0/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "shortname": "web-sdk", "description": "Web SDK configurations" }'
+
+# 4. Get configurations for each shortname in the source version
+curl -X GET "${BASE_URL}/shortnames/web-sdk/versions/2.0.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+
+# 5. For each configuration, create a copy in the new version
+curl -X POST "${BASE_URL}/shortnames/web-sdk/versions/2.1.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "key": "feature.enabled", "value": true, "description": "Toggle for feature" }'
+
+# =============================================
+# Usage Notes
+# =============================================
+
+# 1. Replace YOUR_TOKEN_HERE with the actual token received after login
+
+# 2. Replace example-shortname, 1.0.0, and config-id with actual values
+
+# 3. The BASE_URL is set to the default API endpoint, update if needed
+
+# 4. For operations that require multiple API calls, the examples show the sequence of calls needed

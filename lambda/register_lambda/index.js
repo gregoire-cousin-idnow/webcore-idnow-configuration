@@ -36,14 +36,6 @@ exports.handler = async (event) => {
       };
     }
 
-    // Validate password strength
-    if (password.length < 8) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ message: 'Password must be at least 8 characters long' })
-      };
-    }
-
     // Fetch allowed user types from S3
     const userTypesParams = {
       Bucket: CONFIG_BUCKET,

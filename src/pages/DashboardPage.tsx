@@ -14,29 +14,41 @@ import {
 import { Add as AddIcon } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { shortnamesApi } from '../services/api';
-import { Shortname } from '../types';
+import { Shortname } from '../models';
 
 const DashboardPage: React.FC = () => {
   const [shortnames, setShortnames] = useState<Shortname[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const { state } = useAuth();
+  const { authState } = useAuth();
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchShortnames = async () => {
       try {
         setLoading(true);
         const response = await shortnamesApi.getAll();
-        setShortnames(response.shortnames || []);
-        setError(null);
+        if (isMounted) {
+          setShortnames(response.shortnames || []);
+          setError(null);
+        }
       } catch (err: any) {
-        setError(err.message || 'Failed to fetch shortnames');
+        if (isMounted) {
+          setError(err.message || 'Failed to fetch shortnames');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchShortnames();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -57,7 +69,7 @@ const DashboardPage: React.FC = () => {
       </Box>
 
       <Typography variant="h6" gutterBottom>
-        Welcome, {state.user?.email}!
+        Welcome, {authState.user?.email}!
       </Typography>
 
       {loading ? (

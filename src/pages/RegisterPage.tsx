@@ -13,7 +13,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormHelperText,
   SelectChangeEvent,
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,15 +29,20 @@ const RegisterPage: React.FC = () => {
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [adminKeyError, setAdminKeyError] = useState('');
   
-  const { state, register, clearError } = useAuth();
+  const { authState, register, clearError } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (state.isAuthenticated) {
+    let isMounted = true;
+    // Only redirect if authentication state is confirmed (not loading) and user is authenticated
+    if (isMounted && !authState.loading && authState.isAuthenticated) {
       navigate('/dashboard');
     }
-  }, [state.isAuthenticated, navigate]);
+    return () => {
+      isMounted = false;
+    };
+  }, [authState.isAuthenticated, authState.loading, navigate]);
 
   // Clear errors when unmounting
   useEffect(() => {
@@ -64,9 +68,6 @@ const RegisterPage: React.FC = () => {
     // Validate password
     if (!password) {
       setPasswordError('Password is required');
-      isValid = false;
-    } else if (password.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
       isValid = false;
     } else {
       setPasswordError('');
@@ -107,7 +108,13 @@ const RegisterPage: React.FC = () => {
     e.preventDefault();
     
     if (validateForm()) {
-      await register(email, password, userType, userType === 'admin' ? adminKey : undefined);
+      await register({
+        email,
+        password,
+        confirmPassword: password,
+        userType,
+        adminKey: userType === 'admin' ? adminKey : undefined
+      });
     }
   };
 
@@ -134,9 +141,9 @@ const RegisterPage: React.FC = () => {
           <Typography component="h1" variant="h5">
             Register
           </Typography>
-          {state.error && (
+          {authState.error && (
             <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
-              {state.error}
+              {authState.error}
             </Alert>
           )}
           <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
@@ -153,7 +160,7 @@ const RegisterPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               error={!!emailError}
               helperText={emailError}
-              disabled={state.loading}
+              disabled={authState.loading}
             />
             <TextField
               margin="normal"
@@ -168,7 +175,7 @@ const RegisterPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               error={!!passwordError}
               helperText={passwordError}
-              disabled={state.loading}
+              disabled={authState.loading}
             />
             <TextField
               margin="normal"
@@ -183,9 +190,9 @@ const RegisterPage: React.FC = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={!!confirmPasswordError}
               helperText={confirmPasswordError}
-              disabled={state.loading}
+              disabled={authState.loading}
             />
-            <FormControl fullWidth margin="normal" disabled={state.loading}>
+            <FormControl fullWidth margin="normal" disabled={authState.loading}>
               <InputLabel id="user-type-label">User Type</InputLabel>
               <Select
                 labelId="user-type-label"
@@ -211,7 +218,7 @@ const RegisterPage: React.FC = () => {
                 onChange={(e) => setAdminKey(e.target.value)}
                 error={!!adminKeyError}
                 helperText={adminKeyError}
-                disabled={state.loading}
+                disabled={authState.loading}
               />
             )}
             <Button
@@ -219,9 +226,9 @@ const RegisterPage: React.FC = () => {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={state.loading}
+              disabled={authState.loading}
             >
-              {state.loading ? <CircularProgress size={24} /> : 'Register'}
+              {authState.loading ? <CircularProgress size={24} /> : 'Register'}
             </Button>
             <Box sx={{ textAlign: 'center' }}>
               <Link to="/login">

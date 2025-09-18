@@ -2,28 +2,45 @@ provider "aws" {
   region = var.region
 }
 
-resource "aws_s3_bucket" "cms_config_bucket" {
+# Reference an existing S3 bucket
+data "aws_s3_bucket" "cms_config_bucket" {
   bucket = var.s3_bucket_name
 }
 
+# Add bucket ownership controls
+resource "aws_s3_bucket_ownership_controls" "cms_config_bucket_ownership" {
+  bucket = data.aws_s3_bucket.cms_config_bucket.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+# Configure public access block
+resource "aws_s3_bucket_public_access_block" "cms_config_bucket_access" {
+  bucket = data.aws_s3_bucket.cms_config_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_s3_object" "cms_user_types" {
-  bucket       = aws_s3_bucket.cms_config_bucket.id
+  bucket       = data.aws_s3_bucket.cms_config_bucket.id
   key          = "config/user-types.json"
   content      = jsonencode({
     "allowedUserTypes": ["admin", "user"]
   })
   content_type = "application/json"
-  depends_on   = [aws_s3_bucket.cms_config_bucket]
 }
 
 resource "aws_s3_object" "cms_default_shortnames" {
-  bucket       = aws_s3_bucket.cms_config_bucket.id
+  bucket       = data.aws_s3_bucket.cms_config_bucket.id
   key          = "config/default-shortnames.json"
   content      = jsonencode({
     "shortnames": []
   })
   content_type = "application/json"
-  depends_on   = [aws_s3_bucket.cms_config_bucket]
 }
 
 resource "aws_iam_role" "cms_lambda_exec" {
@@ -56,8 +73,8 @@ resource "aws_iam_policy" "cms_lambda_data_access_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          aws_s3_bucket.cms_config_bucket.arn,
-          "${aws_s3_bucket.cms_config_bucket.arn}/*"
+          data.aws_s3_bucket.cms_config_bucket.arn,
+          "${data.aws_s3_bucket.cms_config_bucket.arn}/*"
         ]
       },
       {
@@ -75,7 +92,11 @@ resource "aws_iam_policy" "cms_lambda_data_access_policy" {
           aws_dynamodb_table.cms_shortnames.arn,
           aws_dynamodb_table.cms_versions.arn,
           aws_dynamodb_table.cms_configurations.arn,
-          aws_dynamodb_table.cms_users.arn
+          aws_dynamodb_table.cms_users.arn,
+          "${aws_dynamodb_table.cms_users.arn}/index/*",
+          "${aws_dynamodb_table.cms_shortnames.arn}/index/*",
+          "${aws_dynamodb_table.cms_versions.arn}/index/*",
+          "${aws_dynamodb_table.cms_configurations.arn}/index/*"
         ]
       }
     ]
@@ -88,7 +109,7 @@ resource "aws_iam_role_policy_attachment" "cms_lambda_data_access_attachment" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "cms_config_files_lifecycle" {
-  bucket = aws_s3_bucket.cms_config_bucket.id
+  bucket = data.aws_s3_bucket.cms_config_bucket.id
 
   rule {
     id     = "ExpireOldFiles"
@@ -133,7 +154,7 @@ module "cms_register_lambda" {
   environment_variables = {
     SECRET_KEY    = var.secret_key
     ADMIN_KEY     = var.admin_key
-    CONFIG_BUCKET = aws_s3_bucket.cms_config_bucket.id
+    CONFIG_BUCKET = data.aws_s3_bucket.cms_config_bucket.id
     USERS_TABLE   = aws_dynamodb_table.cms_users.name
   }
 
@@ -162,7 +183,7 @@ module "cms_login_lambda" {
 
   environment_variables = {
     SECRET_KEY    = var.secret_key
-    CONFIG_BUCKET = aws_s3_bucket.cms_config_bucket.id
+    CONFIG_BUCKET = data.aws_s3_bucket.cms_config_bucket.id
     USERS_TABLE   = aws_dynamodb_table.cms_users.name
   }
 
@@ -191,7 +212,7 @@ module "cms_shortname_lambda" {
 
   environment_variables = {
     SECRET_KEY          = var.secret_key
-    CONFIG_BUCKET       = aws_s3_bucket.cms_config_bucket.id
+    CONFIG_BUCKET       = data.aws_s3_bucket.cms_config_bucket.id
     SHORTNAMES_TABLE    = aws_dynamodb_table.cms_shortnames.name
     VERSIONS_TABLE      = aws_dynamodb_table.cms_versions.name
     CONFIGURATIONS_TABLE = aws_dynamodb_table.cms_configurations.name
@@ -222,7 +243,7 @@ module "cms_version_lambda" {
 
   environment_variables = {
     SECRET_KEY          = var.secret_key
-    CONFIG_BUCKET       = aws_s3_bucket.cms_config_bucket.id
+    CONFIG_BUCKET       = data.aws_s3_bucket.cms_config_bucket.id
     SHORTNAMES_TABLE    = aws_dynamodb_table.cms_shortnames.name
     VERSIONS_TABLE      = aws_dynamodb_table.cms_versions.name
     CONFIGURATIONS_TABLE = aws_dynamodb_table.cms_configurations.name
@@ -253,7 +274,7 @@ module "cms_configuration_lambda" {
 
   environment_variables = {
     SECRET_KEY          = var.secret_key
-    CONFIG_BUCKET       = aws_s3_bucket.cms_config_bucket.id
+    CONFIG_BUCKET       = data.aws_s3_bucket.cms_config_bucket.id
     SHORTNAMES_TABLE    = aws_dynamodb_table.cms_shortnames.name
     VERSIONS_TABLE      = aws_dynamodb_table.cms_versions.name
     CONFIGURATIONS_TABLE = aws_dynamodb_table.cms_configurations.name
@@ -373,10 +394,23 @@ resource "aws_dynamodb_table" "cms_versions" {
     name = "shortname"
     type = "S"
   }
+  
+  attribute {
+    name = "version"
+    type = "S"
+  }
 
   global_secondary_index {
     name               = "ShortnameIndex"
     hash_key           = "shortname"
+    projection_type    = "ALL"
+    write_capacity     = 0
+    read_capacity      = 0
+  }
+  
+  global_secondary_index {
+    name               = "VersionIndex"
+    hash_key           = "version"
     projection_type    = "ALL"
     write_capacity     = 0
     read_capacity      = 0
@@ -467,6 +501,63 @@ module "aws_api_gateway" {
     "POST /api/login" = {
       integration = {
         uri                    = module.cms_login_lambda.lambda_function_invoke_arn
+        payload_format_version = "2.0"
+        type                   = "AWS_PROXY"
+      }
+    },
+    
+    # Version-first approach routes
+    "GET /api/versions" = {
+      integration = {
+        uri                    = module.cms_version_lambda.lambda_function_invoke_arn
+        payload_format_version = "2.0"
+        type                   = "AWS_PROXY"
+      }
+    },
+
+    "POST /api/versions" = {
+      integration = {
+        uri                    = module.cms_version_lambda.lambda_function_invoke_arn
+        payload_format_version = "2.0"
+        type                   = "AWS_PROXY"
+      }
+    },
+
+    "GET /api/versions/{version}" = {
+      integration = {
+        uri                    = module.cms_version_lambda.lambda_function_invoke_arn
+        payload_format_version = "2.0"
+        type                   = "AWS_PROXY"
+      }
+    },
+
+    "PUT /api/versions/{version}" = {
+      integration = {
+        uri                    = module.cms_version_lambda.lambda_function_invoke_arn
+        payload_format_version = "2.0"
+        type                   = "AWS_PROXY"
+      }
+    },
+
+    "DELETE /api/versions/{version}" = {
+      integration = {
+        uri                    = module.cms_version_lambda.lambda_function_invoke_arn
+        payload_format_version = "2.0"
+        type                   = "AWS_PROXY"
+      }
+    },
+
+    "GET /api/versions/{version}/shortnames" = {
+      integration = {
+        uri                    = module.cms_version_lambda.lambda_function_invoke_arn
+        payload_format_version = "2.0"
+        type                   = "AWS_PROXY"
+      }
+    },
+
+    "POST /api/versions/{version}/shortnames" = {
+      integration = {
+        uri                    = module.cms_version_lambda.lambda_function_invoke_arn
         payload_format_version = "2.0"
         type                   = "AWS_PROXY"
       }

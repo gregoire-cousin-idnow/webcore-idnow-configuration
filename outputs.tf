@@ -1,5 +1,5 @@
 output "s3_bucket_name" {
-  value = aws_s3_bucket.cms_config_bucket.id
+  value = data.aws_s3_bucket.cms_config_bucket.id
 }
 
 output "api_gateway_url" {

@@ -17,13 +17,20 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const { state, login, clearError } = useAuth();
+  const { authState, login, clearError } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (state.isAuthenticated) navigate('/dashboard');
-  }, [state.isAuthenticated, navigate]);
+    let isMounted = true;
+    // Only redirect if authentication state is confirmed (not loading) and user is authenticated
+    if (isMounted && !authState.loading && authState.isAuthenticated) {
+      navigate('/dashboard');
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [authState.isAuthenticated, authState.loading, navigate]);
 
   // Clear errors when unmounting
   useEffect(() => {
@@ -50,9 +57,6 @@ const LoginPage: React.FC = () => {
     if (!password) {
       setPasswordError('Password is required');
       isValid = false;
-    } else if (password.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
-      isValid = false;
     } else {
       setPasswordError('');
     }
@@ -64,7 +68,7 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     
     if (validateForm()) {
-      await login(email, password);
+      await login({ email, password });
     }
   };
 
@@ -91,9 +95,9 @@ const LoginPage: React.FC = () => {
           <Typography component="h1" variant="h5">
             Sign in
           </Typography>
-          {state.error && (
+          {authState.error && (
             <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
-              {state.error}
+              {authState.error}
             </Alert>
           )}
           <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
@@ -110,7 +114,7 @@ const LoginPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               error={!!emailError}
               helperText={emailError}
-              disabled={state.loading}
+              disabled={authState.loading}
             />
             <TextField
               margin="normal"
@@ -125,16 +129,16 @@ const LoginPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               error={!!passwordError}
               helperText={passwordError}
-              disabled={state.loading}
+              disabled={authState.loading}
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={state.loading}
+              disabled={authState.loading}
             >
-              {state.loading ? <CircularProgress size={24} /> : 'Sign In'}
+              {authState.loading ? <CircularProgress size={24} /> : 'Sign In'}
             </Button>
             <Box sx={{ textAlign: 'center' }}>
               <Link to="/register">

@@ -2,6 +2,17 @@
  * This Lambda handles CRUD operations for versions.
  * It validates the user's JWT token before performing any operation.
  * Operations include:
+ * 
+ * Version-first approach:
+ * - GET /api/versions - List all versions
+ * - POST /api/versions - Create a new version
+ * - GET /api/versions/{version} - Get a specific version
+ * - PUT /api/versions/{version} - Update a version
+ * - DELETE /api/versions/{version} - Delete a version
+ * - GET /api/versions/{version}/shortnames - Get all shortnames for a version
+ * - POST /api/versions/{version}/shortnames - Add a shortname to a version
+ * 
+ * Shortname-first approach (legacy):
  * - GET /api/shortnames/{shortname}/versions - List all versions for a shortname
  * - POST /api/shortnames/{shortname}/versions - Create a new version for a shortname
  * - GET /api/shortnames/{shortname}/versions/{version} - Get a specific version
@@ -15,7 +26,14 @@ const {
   getVersion, 
   createVersion, 
   updateVersion, 
-  deleteVersion 
+  deleteVersion,
+  getAllVersionsTopLevel,
+  getVersionTopLevel,
+  createVersionTopLevel,
+  updateVersionTopLevel,
+  deleteVersionTopLevel,
+  getVersionShortnames,
+  addShortnameToVersion
 } = require('./utils/index');
 
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -53,6 +71,85 @@ exports.handler = async (event) => {
     // Handle different HTTP methods
     const httpMethod = event.requestContext.http.method;
     const pathParams = event.pathParameters || {};
+    const path = event.requestContext.http.path;
+    
+    // Handle version-first approach
+    if (path.startsWith('/api/versions')) {
+      const version = pathParams.version;
+      
+      if (!version && httpMethod === 'GET') {
+        // GET /api/versions - List all versions
+        return await getAllVersionsTopLevel(VERSIONS_TABLE);
+      }
+      
+      if (!version && httpMethod === 'POST') {
+        // POST /api/versions - Create a new version
+        const body = JSON.parse(event.body || '{}');
+        if (!body.version) {
+          return badRequestResponse('Version is required');
+        }
+        
+        return await createVersionTopLevel(
+          body.version, 
+          userId, 
+          body.description || '', 
+          body.isActive || false,
+          VERSIONS_TABLE
+        );
+      }
+      
+      if (version && httpMethod === 'GET' && !path.includes('/shortnames')) {
+        // GET /api/versions/{version} - Get a specific version
+        return await getVersionTopLevel(version, VERSIONS_TABLE);
+      }
+      
+      if (version && httpMethod === 'PUT') {
+        // PUT /api/versions/{version} - Update a version
+        const body = JSON.parse(event.body || '{}');
+        return await updateVersionTopLevel(
+          version, 
+          body.description, 
+          body.isActive,
+          VERSIONS_TABLE
+        );
+      }
+      
+      if (version && httpMethod === 'DELETE') {
+        // DELETE /api/versions/{version} - Delete a version
+        return await deleteVersionTopLevel(version, VERSIONS_TABLE, CONFIGURATIONS_TABLE);
+      }
+      
+      if (version && path.includes('/shortnames')) {
+        if (httpMethod === 'GET') {
+          // GET /api/versions/{version}/shortnames - Get all shortnames for a version
+          return await getVersionShortnames(version, VERSIONS_TABLE);
+        }
+        
+        if (httpMethod === 'POST') {
+          // POST /api/versions/{version}/shortnames - Add a shortname to a version
+          const body = JSON.parse(event.body || '{}');
+          if (!body.shortname) {
+            return badRequestResponse('Shortname is required');
+          }
+          
+          return await addShortnameToVersion(
+            version, 
+            body.shortname, 
+            body.description || '', 
+            userId, 
+            SHORTNAMES_TABLE, 
+            VERSIONS_TABLE
+          );
+        }
+      }
+      
+      return {
+        statusCode: 405,
+        body: JSON.stringify({ message: 'Method not allowed' })
+      };
+    }
+    
+    // Handle shortname-first approach (legacy)
     const shortname = pathParams.shortname;
     const version = pathParams.version;
 

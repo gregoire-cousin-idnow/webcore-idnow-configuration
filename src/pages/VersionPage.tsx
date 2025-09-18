@@ -24,7 +24,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { versionsApi } from '../services/api';
-import { Version, VersionFormData } from '../types';
+import { Version, VersionFormData } from '../models';
 
 const VersionPage: React.FC = () => {
   const { shortname, version: versionId } = useParams<{ shortname: string; version: string }>();

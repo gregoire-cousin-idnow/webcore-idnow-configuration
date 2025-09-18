@@ -21,7 +21,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VersionsIcon from '@mui/icons-material/Collections';
 import { shortnamesApi } from '../services/api';
-import { Shortname, ShortnameFormData } from '../types';
+import { Shortname, ShortnameFormData } from '../models';
 
 const ShortnamePage: React.FC = () => {
   const { shortname } = useParams<{ shortname: string }>();

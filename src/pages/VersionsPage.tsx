@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Box, 
@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { versionsApi } from '../services/api';
-import { Version, VersionFormData } from '../types';
+import { Version, VersionFormData } from '../models';
 
 const VersionsPage: React.FC = () => {
   const { shortname } = useParams<{ shortname: string }>();
@@ -38,7 +38,7 @@ const VersionsPage: React.FC = () => {
     isActive: true
   });
 
-  const fetchVersions = async () => {
+  const fetchVersions = useCallback(async () => {
     if (!shortname) return;
     
     setLoading(true);
@@ -52,11 +52,11 @@ const VersionsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [shortname]);
 
   useEffect(() => {
     fetchVersions();
-  }, [shortname]);
+  }, [shortname, fetchVersions]);
 
   const handleCreateVersion = () => {
     setOpenDialog(true);
