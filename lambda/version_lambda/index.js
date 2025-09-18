@@ -22,23 +22,24 @@
 
 const { 
   verifyToken, 
-  getAllVersions, 
-  getVersion, 
-  createVersion, 
-  updateVersion, 
+  getAllVersions,
+  getVersion,
+  createVersion,
+  updateVersion,
   deleteVersion,
-  getAllVersionsTopLevel,
-  getVersionTopLevel,
-  createVersionTopLevel,
-  updateVersionTopLevel,
-  deleteVersionTopLevel,
   getVersionShortnames,
-  addShortnameToVersion
+  addShortnameToVersion,
+  getAllVersionsForShortname,
+  getVersionForShortname,
+  createVersionForShortname,
+  updateVersionForShortname,
+  deleteVersionForShortname
 } = require('./utils/index');
 
 const SECRET_KEY = process.env.SECRET_KEY;
 const SHORTNAMES_TABLE = process.env.SHORTNAMES_TABLE;
 const VERSIONS_TABLE = process.env.VERSIONS_TABLE;
+const SHORTNAME_VERSIONS_TABLE = process.env.SHORTNAME_VERSIONS_TABLE;
 const CONFIGURATIONS_TABLE = process.env.CONFIGURATIONS_TABLE;
 
 exports.handler = async (event) => {
@@ -79,7 +80,7 @@ exports.handler = async (event) => {
       
       if (!version && httpMethod === 'GET') {
         // GET /api/versions - List all versions
-        return await getAllVersionsTopLevel(VERSIONS_TABLE);
+        return await getAllVersions(VERSIONS_TABLE);
       }
       
       if (!version && httpMethod === 'POST') {
@@ -89,7 +90,7 @@ exports.handler = async (event) => {
           return badRequestResponse('Version is required');
         }
         
-        return await createVersionTopLevel(
+        return await createVersion(
           body.version, 
           userId, 
           body.description || '', 
@@ -100,13 +101,13 @@ exports.handler = async (event) => {
       
       if (version && httpMethod === 'GET' && !path.includes('/shortnames')) {
         // GET /api/versions/{version} - Get a specific version
-        return await getVersionTopLevel(version, VERSIONS_TABLE);
+        return await getVersion(version, VERSIONS_TABLE);
       }
       
       if (version && httpMethod === 'PUT') {
         // PUT /api/versions/{version} - Update a version
         const body = JSON.parse(event.body || '{}');
-        return await updateVersionTopLevel(
+        return await updateVersion(
           version, 
           body.description, 
           body.isActive,
@@ -116,13 +117,18 @@ exports.handler = async (event) => {
       
       if (version && httpMethod === 'DELETE') {
         // DELETE /api/versions/{version} - Delete a version
-        return await deleteVersionTopLevel(version, VERSIONS_TABLE, CONFIGURATIONS_TABLE);
+        return await deleteVersion(
+          version, 
+          VERSIONS_TABLE, 
+          SHORTNAME_VERSIONS_TABLE, 
+          CONFIGURATIONS_TABLE
+        );
       }
       
       if (version && path.includes('/shortnames')) {
         if (httpMethod === 'GET') {
           // GET /api/versions/{version}/shortnames - Get all shortnames for a version
-          return await getVersionShortnames(version, VERSIONS_TABLE);
+          return await getVersionShortnames(version, SHORTNAME_VERSIONS_TABLE);
         }
         
         if (httpMethod === 'POST') {
@@ -138,7 +144,8 @@ exports.handler = async (event) => {
             body.description || '', 
             userId, 
             SHORTNAMES_TABLE, 
-            VERSIONS_TABLE
+            VERSIONS_TABLE,
+            SHORTNAME_VERSIONS_TABLE
           );
         }
       }
@@ -160,15 +167,15 @@ exports.handler = async (event) => {
     switch (httpMethod) {
       case 'GET':
         if (version) {
-          // Get specific version
-          return await getVersion(shortname, version, VERSIONS_TABLE);
+          // Get specific version for a shortname
+          return await getVersionForShortname(shortname, version, SHORTNAME_VERSIONS_TABLE);
         } else {
           // List all versions for a shortname
-          return await getAllVersions(shortname, VERSIONS_TABLE);
+          return await getAllVersionsForShortname(shortname, SHORTNAME_VERSIONS_TABLE);
         }
 
       case 'POST':
-        // Create new version
+        // Create new version for a shortname
         if (version) {
           return badRequestResponse('Version should not be provided in the URL for POST requests');
         }
@@ -178,38 +185,44 @@ exports.handler = async (event) => {
           return badRequestResponse('Version is required');
         }
 
-        return await createVersion(
+        return await createVersionForShortname(
           shortname, 
           createBody.version, 
           userId, 
           createBody.description || '', 
           createBody.isActive || false,
           SHORTNAMES_TABLE,
-          VERSIONS_TABLE
+          VERSIONS_TABLE,
+          SHORTNAME_VERSIONS_TABLE
         );
 
       case 'PUT':
-        // Update version
+        // Update version for a shortname
         if (!version) {
           return badRequestResponse('Version is required in the URL');
         }
 
         const updateBody = JSON.parse(event.body || '{}');
-        return await updateVersion(
+        return await updateVersionForShortname(
           shortname, 
           version, 
           updateBody.description, 
           updateBody.isActive,
-          VERSIONS_TABLE
+          SHORTNAME_VERSIONS_TABLE
         );
 
       case 'DELETE':
-        // Delete version
+        // Delete version for a shortname
         if (!version) {
           return badRequestResponse('Version is required in the URL');
         }
 
-        return await deleteVersion(shortname, version, VERSIONS_TABLE, CONFIGURATIONS_TABLE);
+        return await deleteVersionForShortname(
+          shortname, 
+          version, 
+          SHORTNAME_VERSIONS_TABLE, 
+          CONFIGURATIONS_TABLE
+        );
 
       default:
         return {

@@ -1,141 +1,320 @@
+# Curl Examples for Version-First API Endpoints
 
-# API Curl Command Examples
+These examples demonstrate how to interact with the version-first API endpoints using curl. Replace the base URL, token, and other values as needed for your environment.
 
+## Setup Variables
+
+```bash
+# Base URL - replace with your actual API Gateway URL
 BASE_URL="https://6bz00r29y3.execute-api.eu-west-3.amazonaws.com/api"
 
-# =============================================
-# Authentication Endpoints
-# =============================================
+# Authentication token - replace with a valid token from your system
+TOKEN="your_jwt_token_here"
 
-# Login
-curl -X POST "${BASE_URL}/login" -H "Content-Type: application/json" -d '{ "email": "user@example.com", "password": "yourpassword" }'
+# Common curl options
+COMMON_OPTS="-H \"Content-Type: application/json\" -H \"Authorization: Bearer \$TOKEN\""
+```
 
-# Register
-curl -X POST "${BASE_URL}/register" -H "Content-Type: application/json" -d '{ "email": "newuser@example.com", "password": "newpassword", "confirmPassword": "newpassword", "userType": "user" }'
+## Important Note
 
-# Register as Admin (requires admin key)
-curl -X POST "${BASE_URL}/register" -H "Content-Type: application/json" -d '{ "email": "admin@example.com", "password": "adminpassword", "confirmPassword": "adminpassword", "userType": "admin", "adminKey": "your-admin-key" }'
+This API now uses a true version-first approach where:
+1. Versions exist independently without any shortnames
+2. Shortnames can be added to versions explicitly when needed
+3. Configurations are created for specific shortname-version combinations
 
-# =============================================
-# Shortname Endpoints
-# =============================================
+This is a significant change from the previous approach where creating a version would automatically create a shortname. Now, you must explicitly add shortnames to versions when needed.
 
-# Get all shortnames
-curl -X GET "${BASE_URL}/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+## Version Operations
 
-# Get a specific shortname
-curl -X GET "${BASE_URL}/shortnames/example-shortname" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+### 1. Get All Versions
 
-# Create a new shortname
-curl -X POST "${BASE_URL}/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "shortname": "new-shortname", "description": "Description of the new shortname" }'
+```bash
+curl -X GET "$BASE_URL/versions" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# Update a shortname
-curl -X PUT "${BASE_URL}/shortnames/example-shortname" \
-   -`H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "shortname": "example-shortname", "description": "Updated description for the shortname" }'
+### 2. Create a New Version
 
-# Delete a shortname
-curl -X DELETE "${BASE_URL}/shortnames/example-shortname" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+```bash
+curl -X POST "$BASE_URL/versions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "version": "1.0.0",
+    "description": "Initial version",
+    "isActive": true
+  }'
+```
 
-# =============================================
-# Version Endpoints (Version-First Approach)
-# =============================================
+### 3. Get a Specific Version
 
-# Get all versions (top-level)
-curl -X GET "${BASE_URL}/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+```bash
+curl -X GET "$BASE_URL/versions/1.0.0" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# Get a specific version by ID
-curl -X GET "${BASE_URL}/versions/2.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+### 4. Update a Version
 
-# Create a new version (top-level entity)
-curl -X POST "${BASE_URL}/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "2.0.0", "description": "New major version", "isActive": true }'
+```bash
+curl -X PUT "$BASE_URL/versions/1.0.0" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "description": "Updated description",
+    "isActive": true
+  }'
+```
 
-# Update a version
-curl -X PUT "${BASE_URL}/versions/2.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "2.0.0", "description": "Updated version description", "isActive": true }'
+### 5. Delete a Version
 
-# Delete a version
-curl -X DELETE "${BASE_URL}/versions/2.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+```bash
+curl -X DELETE "$BASE_URL/versions/1.0.0" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# Get all shortnames for a version
-curl -X GET "${BASE_URL}/versions/2.0.0/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+## Shortname Operations
 
-# Add a shortname to a version
-curl -X POST "${BASE_URL}/versions/2.0.0/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "shortname": "web-sdk", "description": "Web SDK configurations" }'
+### 1. Get All Shortnames for a Version
 
-# =============================================
-# Version-Shortname Association (Legacy Approach)
-# =============================================
+```bash
+curl -X GET "$BASE_URL/versions/1.0.0/shortnames" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# Get all versions for a shortname
-curl -X GET "${BASE_URL}/shortnames/example-shortname/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+### 2. Add a Shortname to a Version
 
-# Get a specific version for a shortname
-curl -X GET "${BASE_URL}/shortnames/example-shortname/versions/1.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+```bash
+curl -X POST "$BASE_URL/versions/1.0.0/shortnames" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "shortname": "my-app",
+    "description": "My application shortname"
+  }'
+```
 
-# Create a new version for a shortname
-curl -X POST "${BASE_URL}/shortnames/example-shortname/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "1.0.0", "description": "Initial version", "isActive": true }'
+## Legacy Shortname-First Operations (for reference)
 
-# Update a version
-curl -X PUT "${BASE_URL}/shortnames/example-shortname/versions/1.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "1.0.0", "description": "Updated version description", "isActive": true }'
+### 1. Get All Versions for a Shortname
 
-# Delete a version
-curl -X DELETE "${BASE_URL}/shortnames/example-shortname/versions/1.0.0" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+```bash
+curl -X GET "$BASE_URL/shortnames/my-app/versions" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# =============================================
-# Configuration Endpoints
-# =============================================
+### 2. Create a Version for a Shortname
 
-# Get all configurations for a version
-curl -X GET "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+```bash
+curl -X POST "$BASE_URL/shortnames/my-app/versions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "version": "1.0.0",
+    "description": "Initial version",
+    "isActive": true
+  }'
+```
 
-# Get a specific configuration
-curl -X GET "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations/config-id" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+### 3. Get a Specific Version for a Shortname
 
-# Create a new configuration
-curl -X POST "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "key": "feature.enabled", "value": true, "description": "Toggle for feature" }'
+```bash
+curl -X GET "$BASE_URL/shortnames/my-app/versions/1.0.0" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# Create a configuration with JSON value
-curl -X POST "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "key": "app.settings", "value": { "theme": "dark", "notifications": true, "language": "en" }, "description": "Application settings" }'
+### 4. Update a Version for a Shortname
 
-# Update a configuration
-curl -X PUT "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations/config-id" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "key": "feature.enabled", "value": false, "description": "Toggle for feature (updated)" }'
+```bash
+curl -X PUT "$BASE_URL/shortnames/my-app/versions/1.0.0" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "description": "Updated description",
+    "isActive": true
+  }'
+```
 
-# Delete a configuration
-curl -X DELETE "${BASE_URL}/shortnames/example-shortname/versions/1.0.0/configurations/config-id" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+### 5. Delete a Version for a Shortname
 
-# =============================================
-# Advanced Operations
-# =============================================
+```bash
+curl -X DELETE "$BASE_URL/shortnames/my-app/versions/1.0.0" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# Get all versions (version-first approach)
-curl -X GET "${BASE_URL}/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+## Configuration Operations
 
-# Duplicate a version (create a new version with the same shortnames and configurations)
+### 1. Get All Configurations for a Version-Shortname Combination
 
-# Note: This is a client-side operation that makes multiple API calls
+```bash
+curl -X GET "$BASE_URL/shortnames/my-app/versions/1.0.0/configurations" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# 1. Create the new version
-curl -X POST "${BASE_URL}/versions" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "version": "2.1.0", "description": "New version based on 2.0.0", "isActive": true }'
+### 2. Create a Configuration for a Version-Shortname Combination
 
-# 2. Get all shortnames for the source version
-curl -X GET "${BASE_URL}/versions/2.0.0/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+```bash
+curl -X POST "$BASE_URL/shortnames/my-app/versions/1.0.0/configurations" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "key": "api_url",
+    "value": "https://api.example.com",
+    "description": "API endpoint URL"
+  }'
+```
 
-# 3. For each shortname, add it to the new version
-curl -X POST "${BASE_URL}/versions/2.1.0/shortnames" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "shortname": "web-sdk", "description": "Web SDK configurations" }'
+### 3. Get a Specific Configuration
 
-# 4. Get configurations for each shortname in the source version
-curl -X GET "${BASE_URL}/shortnames/web-sdk/versions/2.0.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json"
+```bash
+curl -X GET "$BASE_URL/shortnames/my-app/versions/1.0.0/configurations/config-id" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# 5. For each configuration, create a copy in the new version
-curl -X POST "${BASE_URL}/shortnames/web-sdk/versions/2.1.0/configurations" -H "Authorization: Bearer YOUR_TOKEN_HERE" -H "Content-Type: application/json" -d '{ "key": "feature.enabled", "value": true, "description": "Toggle for feature" }'
+### 4. Update a Configuration
 
-# =============================================
-# Usage Notes
-# =============================================
+```bash
+curl -X PUT "$BASE_URL/shortnames/my-app/versions/1.0.0/configurations/config-id" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "value": "https://new-api.example.com",
+    "description": "Updated API endpoint URL"
+  }'
+```
 
-# 1. Replace YOUR_TOKEN_HERE with the actual token received after login
+### 5. Delete a Configuration
 
-# 2. Replace example-shortname, 1.0.0, and config-id with actual values
+```bash
+curl -X DELETE "$BASE_URL/shortnames/my-app/versions/1.0.0/configurations/config-id" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
-# 3. The BASE_URL is set to the default API endpoint, update if needed
+## Authentication Operations
 
-# 4. For operations that require multiple API calls, the examples show the sequence of calls needed
+### 1. Register a New User
+
+```bash
+curl -X POST "$BASE_URL/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securePassword123!",
+    "userType": "user"
+  }'
+```
+
+### 2. Login
+
+```bash
+curl -X POST "$BASE_URL/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securePassword123!"
+  }'
+```
+
+## Testing Script
+
+Here's a simple script to test the version-first endpoints:
+
+```bash
+#!/bin/bash
+
+# Set variables
+BASE_URL="https://6bz00r29y3.execute-api.eu-west-3.amazonaws.com/api"
+EMAIL="test@example.com"
+PASSWORD="Test123!"
+VERSION="1.0.0"
+SHORTNAME="test-app"
+
+# Login to get token
+echo "Logging in..."
+TOKEN=$(curl -s -X POST "$BASE_URL/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+
+if [ -z "$TOKEN" ]; then
+  echo "Login failed. Trying to register..."
+  curl -s -X POST "$BASE_URL/register" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\",\"userType\":\"user\"}"
+  
+  echo "Now logging in..."
+  TOKEN=$(curl -s -X POST "$BASE_URL/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+fi
+
+echo "Token: $TOKEN"
+
+# Step 1: Create a version (without any shortname)
+echo -e "\n=== Step 1: Creating a standalone version ==="
+echo "Creating version $VERSION..."
+curl -s -X POST "$BASE_URL/versions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "{\"version\":\"$VERSION\",\"description\":\"Test version\",\"isActive\":true}"
+
+# Get all versions
+echo -e "\n=== Step 2: Verify the version was created ==="
+echo "Getting all versions..."
+curl -s -X GET "$BASE_URL/versions" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Get specific version
+echo -e "\n=== Step 3: Get the specific version details ==="
+echo "Getting version $VERSION..."
+curl -s -X GET "$BASE_URL/versions/$VERSION" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Add a shortname to the version
+echo -e "\n=== Step 4: Add a shortname to the version ==="
+echo "Adding shortname $SHORTNAME to version $VERSION..."
+curl -s -X POST "$BASE_URL/versions/$VERSION/shortnames" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "{\"shortname\":\"$SHORTNAME\",\"description\":\"Test shortname\"}"
+
+# Get all shortnames for the version
+echo -e "\n=== Step 5: Verify the shortname was added to the version ==="
+echo "Getting all shortnames for version $VERSION..."
+curl -s -X GET "$BASE_URL/versions/$VERSION/shortnames" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Create a configuration for the shortname-version combination
+echo -e "\n=== Step 6: Create a configuration for the shortname-version combination ==="
+echo "Creating configuration for shortname $SHORTNAME and version $VERSION..."
+curl -s -X POST "$BASE_URL/shortnames/$SHORTNAME/versions/$VERSION/configurations" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "key": "api_url",
+    "value": "https://api.example.com",
+    "description": "API endpoint URL"
+  }'
+
+# Get configurations for the shortname-version combination
+echo -e "\n=== Step 7: Verify the configuration was created ==="
+echo "Getting configurations for shortname $SHORTNAME and version $VERSION..."
+curl -s -X GET "$BASE_URL/shortnames/$SHORTNAME/versions/$VERSION/configurations" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Update the version
+echo -e "\n=== Step 8: Update the version ==="
+echo "Updating version $VERSION..."
+curl -s -X PUT "$BASE_URL/versions/$VERSION" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "{\"description\":\"Updated test version\",\"isActive\":true}"
+
+# Delete the version (this will also delete all shortname associations and configurations)
+echo -e "\n=== Step 9: Clean up - Delete the version ==="
+echo "Deleting version $VERSION..."
+curl -s -X DELETE "$BASE_URL/versions/$VERSION" \
+  -H "Authorization: Bearer $TOKEN"
+
+echo -e "\n=== Test completed ==="
+```
+
+Save this script to a file (e.g., `test-api.sh`), make it executable with `chmod +x test-api.sh`, and run it to test the API endpoints.

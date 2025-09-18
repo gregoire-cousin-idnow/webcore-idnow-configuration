@@ -87,7 +87,7 @@ export class VersionService extends BaseService {
   async deleteVersion(version: string, setError?: (error: string) => void): Promise<any> {
     try {
       // Delete the version from the top-level versions endpoint
-      const url = `${API_ENDPOINTS.VERSIONS.ALL}/${version}`;
+      const url = API_ENDPOINTS.VERSIONS.DETAIL_BY_ID(version);
       return this.delete(url, setError);
     } catch (error) {
       if (setError) setError(error instanceof Error ? error.message : 'Failed to delete version');

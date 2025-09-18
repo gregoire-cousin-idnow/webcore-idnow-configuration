@@ -91,11 +91,13 @@ resource "aws_iam_policy" "cms_lambda_data_access_policy" {
         Resource = [
           aws_dynamodb_table.cms_shortnames.arn,
           aws_dynamodb_table.cms_versions.arn,
+          aws_dynamodb_table.cms_shortname_versions.arn,
           aws_dynamodb_table.cms_configurations.arn,
           aws_dynamodb_table.cms_users.arn,
           "${aws_dynamodb_table.cms_users.arn}/index/*",
           "${aws_dynamodb_table.cms_shortnames.arn}/index/*",
           "${aws_dynamodb_table.cms_versions.arn}/index/*",
+          "${aws_dynamodb_table.cms_shortname_versions.arn}/index/*",
           "${aws_dynamodb_table.cms_configurations.arn}/index/*"
         ]
       }
@@ -215,6 +217,7 @@ module "cms_shortname_lambda" {
     CONFIG_BUCKET       = data.aws_s3_bucket.cms_config_bucket.id
     SHORTNAMES_TABLE    = aws_dynamodb_table.cms_shortnames.name
     VERSIONS_TABLE      = aws_dynamodb_table.cms_versions.name
+    SHORTNAME_VERSIONS_TABLE = aws_dynamodb_table.cms_shortname_versions.name
     CONFIGURATIONS_TABLE = aws_dynamodb_table.cms_configurations.name
   }
 
@@ -246,6 +249,7 @@ module "cms_version_lambda" {
     CONFIG_BUCKET       = data.aws_s3_bucket.cms_config_bucket.id
     SHORTNAMES_TABLE    = aws_dynamodb_table.cms_shortnames.name
     VERSIONS_TABLE      = aws_dynamodb_table.cms_versions.name
+    SHORTNAME_VERSIONS_TABLE = aws_dynamodb_table.cms_shortname_versions.name
     CONFIGURATIONS_TABLE = aws_dynamodb_table.cms_configurations.name
   }
 
@@ -277,6 +281,7 @@ module "cms_configuration_lambda" {
     CONFIG_BUCKET       = data.aws_s3_bucket.cms_config_bucket.id
     SHORTNAMES_TABLE    = aws_dynamodb_table.cms_shortnames.name
     VERSIONS_TABLE      = aws_dynamodb_table.cms_versions.name
+    SHORTNAME_VERSIONS_TABLE = aws_dynamodb_table.cms_shortname_versions.name
     CONFIGURATIONS_TABLE = aws_dynamodb_table.cms_configurations.name
   }
 
@@ -380,6 +385,7 @@ resource "aws_dynamodb_table" "cms_shortnames" {
   }
 }
 
+# Table for storing versions
 resource "aws_dynamodb_table" "cms_versions" {
   name         = "${var.project_name}-versions-${var.cms_suffix}"
   billing_mode = "PAY_PER_REQUEST"
@@ -387,6 +393,44 @@ resource "aws_dynamodb_table" "cms_versions" {
 
   attribute {
     name = "versionId"
+    type = "S"
+  }
+
+  attribute {
+    name = "shortname"
+    type = "S"
+  }
+  
+  attribute {
+    name = "version"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name               = "ShortnameIndex"
+    hash_key           = "shortname"
+    projection_type    = "ALL"
+    write_capacity     = 0
+    read_capacity      = 0
+  }
+  
+  global_secondary_index {
+    name               = "VersionIndex"
+    hash_key           = "version"
+    projection_type    = "ALL"
+    write_capacity     = 0
+    read_capacity      = 0
+  }
+}
+
+# Table for storing shortname-version associations
+resource "aws_dynamodb_table" "cms_shortname_versions" {
+  name         = "${var.project_name}-shortname-versions-${var.cms_suffix}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "shortnameVersionId"
+
+  attribute {
+    name = "shortnameVersionId"
     type = "S"
   }
 

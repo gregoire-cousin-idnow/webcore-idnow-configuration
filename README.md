@@ -17,16 +17,16 @@ The WebCore Configuration Management System is a React-based web application tha
 
 ### Implementation Note
 
-This system uses a hybrid approach where the frontend presents a version-first UI but interacts with a backend that uses a shortname-first API structure. This approach allows for a better user experience while maintaining compatibility with the existing backend.
+This system uses a true version-first approach where both the frontend and backend treat versions as top-level entities. This approach provides a more intuitive user experience and a cleaner API structure.
 
 **Current Implementation:**
-- Versions are presented as top-level entities in the UI
-- Behind the scenes, each version is associated with at least one shortname
-- When creating a version, a default shortname with the same name is automatically created
-- When retrieving all versions, the system aggregates versions across all shortnames
+- Versions are treated as top-level entities in both the UI and API
+- Versions can exist independently without any shortnames
+- Shortnames can be added to versions explicitly when needed
+- Each version can be associated with multiple shortnames
+- Each shortname-version combination can have its own set of configurations
 
-**Future Backend Updates:**
-The backend will eventually be updated to support true version-first endpoints that match the frontend design.
+This is a significant change from the previous approach where creating a version would automatically create a shortname. Now, you must explicitly add shortnames to versions when needed.
 
 ### Frontend and Backend Interaction
 
@@ -71,7 +71,7 @@ flowchart TD
 
 ```mermaid
 graph TD
-    A[Version] -->|associated with| B[Shortnames]
+    A[Version] -->|can be associated with| B[Shortnames]
     B -->|has many| C[Configurations]
     
     D[Developer] -->|creates| A
@@ -81,7 +81,7 @@ graph TD
     G[Version 1.0.0] -->|duplicated to| H[Version 1.1.0]
     H -->|inherits configs from| G
     
-    subgraph "Correct Relationship"
+    subgraph "Version-First Relationship"
         V1[Version 2.0.0] --- S1[Shortname A]
         V1 --- S2[Shortname B]
         V1 --- S3[Shortname C]
@@ -90,10 +90,15 @@ graph TD
         S3 --- C3[Configurations for C]
     end
     
+    subgraph "Version Without Shortnames"
+        V2[Version 3.0.0]
+    end
+    
     style A fill:#f96,stroke:#333,stroke-width:2px
     style G fill:#bbf,stroke:#333,stroke-width:2px
     style H fill:#bbf,stroke:#333,stroke-width:2px
     style V1 fill:#f96,stroke:#333,stroke-width:2px
+    style V2 fill:#f96,stroke:#333,stroke-width:2px
 ```
 
 ## 🏗️ Architecture
@@ -210,7 +215,7 @@ flowchart LR
 **Example:**
 
 1. Developer Sarah is working on ticket SPX-300 for a new feature
-2. She needs specific configurations for version 2.1.0
+2. She needs specific configurations for version 2.1.0 with the web-sdk shortname
 3. She retrieves the configurations using:
    ```bash
    curl -X GET "https://api.example.com/api/shortnames/web-sdk/versions/2.1.0/configurations" \
@@ -246,11 +251,13 @@ flowchart TD
 flowchart LR
     A[Product Manager] -->|Planning next release| B[Review current configs]
     B -->|Identify needed changes| C[Create new version]
-    C -->|Duplicate from v2.1.0| D[Modify specific configs]
-    D -->|Share with team| E[Get feedback]
+    C -->|Duplicate from v2.1.0| D[Add shortnames to version]
+    D -->|Modify specific configs| E[Share with team]
+    E -->|Get feedback| F[Finalize]
     
     style A fill:#bbf,stroke:#333,stroke-width:2px
     style C fill:#f96,stroke:#333,stroke-width:2px
+    style D fill:#f96,stroke:#333,stroke-width:2px
 ```
 
 **Example:**
@@ -258,8 +265,9 @@ flowchart LR
 1. Product Manager Lisa is planning features for the next release
 2. She reviews the current configurations for version 2.1.0
 3. She creates a new version 2.2.0 by duplicating 2.1.0
-4. She modifies specific configurations to enable new features
-5. The development team can now work with these configurations
+4. She adds the necessary shortnames to the new version
+5. She modifies specific configurations to enable new features
+6. The development team can now work with these configurations
 
 ## 🔌 Integration Examples
 
@@ -422,7 +430,17 @@ https://api.example.com/api/shortnames/web-sdk/versions/2.1.0/configurations
 - `POST /api/login`: Authenticate user
 - `POST /api/register`: Register new user
 
-### Versions API
+### Versions API (Version-First Approach)
+
+- `GET /api/versions`: Get all versions
+- `GET /api/versions/{version}`: Get a specific version
+- `POST /api/versions`: Create a new version
+- `PUT /api/versions/{version}`: Update a version
+- `DELETE /api/versions/{version}`: Delete a version
+- `GET /api/versions/{version}/shortnames`: Get all shortnames for a version
+- `POST /api/versions/{version}/shortnames`: Add a shortname to a version
+
+### Legacy Versions API (Shortname-First Approach)
 
 - `GET /api/shortnames/{shortname}/versions`: Get all versions for a shortname
 - `GET /api/shortnames/{shortname}/versions/{version}`: Get a specific version
@@ -461,16 +479,12 @@ sequenceDiagram
     Note over Dev,API: Create a new version 2.1.0
     API-->>Dev: Created version details
     
-    Dev->>API: GET /api/shortnames
-    API-->>Dev: List of all shortnames
+    Dev->>API: POST /api/versions/2.1.0/shortnames
+    Note over Dev,API: Add shortname "web-sdk" to version
+    API-->>Dev: Shortname added to version
     
-    Dev->>API: POST /api/shortnames
-    Note over Dev,API: Create a new shortname "web-sdk"
-    API-->>Dev: Created shortname details
-    
-    Dev->>API: POST /api/shortnames/web-sdk/versions/2.1.0
-    Note over Dev,API: Associate shortname with version
-    API-->>Dev: Association created
+    Dev->>API: GET /api/versions/2.1.0/shortnames
+    API-->>Dev: List of all shortnames for version 2.1.0
     
     Dev->>API: POST /api/shortnames/web-sdk/versions/2.1.0/configurations
     Note over Dev,API: Create configuration for this shortname and version
@@ -494,9 +508,9 @@ curl -X POST "https://api.example.com/api/versions" \
   }'
 ```
 
-2. Create a shortname:
+2. Add a shortname to the version:
 ```bash
-curl -X POST "https://api.example.com/api/shortnames" \
+curl -X POST "https://api.example.com/api/versions/2.1.0/shortnames" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -505,19 +519,7 @@ curl -X POST "https://api.example.com/api/shortnames" \
   }'
 ```
 
-3. Associate the shortname with the version:
-```bash
-curl -X POST "https://api.example.com/api/shortnames/web-sdk/versions" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "version": "2.1.0",
-    "description": "Version 2.1.0 for web-sdk",
-    "isActive": true
-  }'
-```
-
-4. Create configurations for this shortname and version:
+3. Create configurations for this shortname and version:
 ```bash
 curl -X POST "https://api.example.com/api/shortnames/web-sdk/versions/2.1.0/configurations" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
