@@ -1,4 +1,9 @@
-import { ReportHandler } from 'web-vitals';
+// Using type import instead of direct import to avoid CommonJS/ESM conflict
+type ReportHandler = (metric: {
+  id: string;
+  name: string;
+  value: number;
+}) => void;
 
 const reportWebVitals = (onPerfEntry?: ReportHandler) => {
   if (onPerfEntry && onPerfEntry instanceof Function) {
